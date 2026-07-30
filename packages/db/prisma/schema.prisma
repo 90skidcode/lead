@@ -17,10 +17,11 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users        TenantUser[]
-  teams        Team[]
-  invitations  Invitation[]
-  auditLogs    AuditLog[]
+  users                   TenantUser[]
+  teams                   Team[]
+  invitations             Invitation[]
+  auditLogs               AuditLog[]
+  impersonationSessions   ImpersonationSession[]
 
   @@index([slug])
   @@map("tenants")
@@ -36,9 +37,11 @@ model User {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  tenants              TenantUser[]
-  invitedInvitations   Invitation[] @relation("invitedBy")
-  createdAuditLogs     AuditLog[]   @relation("actor")
+  tenants                    TenantUser[]
+  invitedInvitations         Invitation[] @relation("invitedBy")
+  createdAuditLogs           AuditLog[]   @relation("actor")
+  impersonationSessionsAsAdmin ImpersonationSession[] @relation("superAdminImpersonation")
+  impersonationSessionsAsTarget ImpersonationSession[] @relation("targetImpersonation")
 
   @@map("users")
 }
@@ -126,3 +129,24 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
+model ImpersonationSession {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  superAdminUserId String   @db.Uuid @map("super_admin_user_id")
+  targetUserId     String   @db.Uuid @map("target_user_id")
+  tenantId         String   @db.Uuid @map("tenant_id")
+  reason           String
+  ipAddress        String?  @map("ip_address")
+  startedAt        DateTime @default(now()) @map("started_at")
+  endedAt          DateTime? @map("ended_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  superAdmin  User   @relation("superAdminImpersonation", fields: [superAdminUserId], references: [id], onDelete: Restrict)
+  targetUser  User   @relation("targetImpersonation", fields: [targetUserId], references: [id], onDelete: Restrict)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([superAdminUserId, startedAt])
+  @@index([targetUserId, startedAt])
+  @@map("impersonation_sessions")
+}
+

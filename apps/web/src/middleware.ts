@@ -1,11 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { resolveSession } from './features/auth/middleware';
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const { session, response } = await resolveSession(request);
 
-  // This is a placeholder middleware for tenant/session resolution.
-  // Full implementation in Phase 1.
-  // For now, we're just setting up the structure.
+  if (session) {
+    response.headers.set('x-tenant-id', session.tenantId);
+    response.headers.set('x-user-id', session.userId);
+    response.headers.set('x-user-role', session.role);
+    if (session.isPlatformSuperAdmin) {
+      response.headers.set('x-is-super-admin', 'true');
+    }
+  }
 
   return response;
 }

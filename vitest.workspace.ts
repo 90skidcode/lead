@@ -11,10 +11,14 @@ export default defineWorkspace([
   },
   {
     test: {
-      name: 'db',
+      name: 'packages-node',
       environment: 'node',
       globals: true,
     },
-    include: ['packages/db/**/*.test.ts'],
+    include: [
+      'packages/db/**/*.test.ts',
+      'packages/auth/**/*.test.ts',
+      'packages/permissions/**/*.test.ts',
+    ],
   },
 ]);
