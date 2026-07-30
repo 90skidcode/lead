@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lead_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install
+
+      - run: pnpm type-check
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_ANON_KEY: test-key
+          SUPABASE_SERVICE_ROLE_KEY: test-key
+          POWERSYNC_URL: https://example.powersync.co
+          POWERSYNC_TOKEN_SECRET: test-secret
+          RESEND_API_KEY: test-key
+          INNGEST_EVENT_KEY: test-key
+          INNGEST_SIGNING_KEY: test-key
+          SESSION_SECRET: test-secret-min-32-chars-here-!
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NODE_ENV: test
+
+      - run: pnpm lint
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_ANON_KEY: test-key
+          SUPABASE_SERVICE_ROLE_KEY: test-key
+          POWERSYNC_URL: https://example.powersync.co
+          POWERSYNC_TOKEN_SECRET: test-secret
+          RESEND_API_KEY: test-key
+          INNGEST_EVENT_KEY: test-key
+          INNGEST_SIGNING_KEY: test-key
+          SESSION_SECRET: test-secret-min-32-chars-here-!
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NODE_ENV: test
+
+      - run: pnpm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_ANON_KEY: test-key
+          SUPABASE_SERVICE_ROLE_KEY: test-key
+          POWERSYNC_URL: https://example.powersync.co
+          POWERSYNC_TOKEN_SECRET: test-secret
+          RESEND_API_KEY: test-key
+          INNGEST_EVENT_KEY: test-key
+          INNGEST_SIGNING_KEY: test-key
+          SESSION_SECRET: test-secret-min-32-chars-here-!
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NODE_ENV: test
+
+      - run: pnpm build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/lead_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_ANON_KEY: test-key
+          SUPABASE_SERVICE_ROLE_KEY: test-key
+          POWERSYNC_URL: https://example.powersync.co
+          POWERSYNC_TOKEN_SECRET: test-secret
+          RESEND_API_KEY: test-key
+          INNGEST_EVENT_KEY: test-key
+          INNGEST_SIGNING_KEY: test-key
+          SESSION_SECRET: test-secret-min-32-chars-here-!
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NODE_ENV: production

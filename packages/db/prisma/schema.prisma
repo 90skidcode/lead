@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  slug      String   @unique
+  status    String   @default("active") // active|suspended
+  plan      String   @default("starter")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users        TenantUser[]
+  teams        Team[]
+  invitations  Invitation[]
+  auditLogs    AuditLog[]
+
+  @@index([slug])
+  @@map("tenants")
+}
+
+model User {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String   @unique
+  passwordHash         String   @map("password_hash")
+  emailVerifiedAt      DateTime? @map("email_verified_at")
+  isPlatformSuperAdmin Boolean  @default(false) @map("is_platform_super_admin")
+  status               String   @default("active") // active|disabled
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenants              TenantUser[]
+  invitedInvitations   Invitation[] @relation("invitedBy")
+  createdAuditLogs     AuditLog[]   @relation("actor")
+
+  @@map("users")
+}
+
+model TenantUser {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  userId    String   @db.Uuid @map("user_id")
+  role      String   // OWNER|ADMIN|MANAGER|SALES_REP|VIEWER
+  teamId    String?  @db.Uuid @map("team_id")
+  status    String   @default("active") // active|invited|deactivated
+  invitedBy String?  @db.Uuid @map("invited_by")
+  invitedAt DateTime? @map("invited_at")
+  joinedAt  DateTime? @map("joined_at")
+  deactivatedAt DateTime? @map("deactivated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team?  @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  inviter   User?  @relation("invitedBy", fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, status])
+  @@index([userId])
+  @@map("tenant_users")
+}
+
+model Team {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  name        String
+  managerUserId String? @db.Uuid @map("manager_user_id")
+  status      String   @default("active") // active|inactive
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members     TenantUser[]
+
+  @@index([tenantId])
+  @@map("teams")
+}
+
+model Invitation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  email       String
+  role        String   // OWNER|ADMIN|MANAGER|SALES_REP|VIEWER
+  teamId      String?  @db.Uuid @map("team_id")
+  tokenHash   String   @map("token_hash")
+  status      String   @default("pending") // pending|accepted|cancelled|expired
+  invitedBy   String   @db.Uuid @map("invited_by")
+  expiresAt   DateTime @map("expires_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inviter     User   @relation("invitedBy", fields: [invitedBy], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, email, tokenHash])
+  @@index([tenantId, status])
+  @@map("invitations")
+}
+
+model AuditLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String?  @db.Uuid @map("tenant_id")
+  actorUserId      String   @db.Uuid @map("actor_user_id")
+  actorIsSuperAdmin Boolean  @default(false) @map("actor_is_super_admin")
+  action           String
+  entityType       String   @map("entity_type")
+  entityId         String   @map("entity_id")
+  metadata         Json     @default("{}")
+  ipAddress        String?  @map("ip_address")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor     User    @relation("actor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
