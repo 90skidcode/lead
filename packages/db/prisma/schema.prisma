@@ -17,11 +17,22 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  users                   TenantUser[]
-  teams                   Team[]
-  invitations             Invitation[]
-  auditLogs               AuditLog[]
-  impersonationSessions   ImpersonationSession[]
+  users                     TenantUser[]
+  teams                     Team[]
+  invitations               Invitation[]
+  auditLogs                 AuditLog[]
+  impersonationSessions     ImpersonationSession[]
+  companies                 Company[]
+  contacts                  Contact[]
+  leadSources               LeadSource[]
+  tags                      Tag[]
+  leads                     Lead[]
+  leadContacts              LeadContact[]
+  leadTags                  LeadTag[]
+  customFieldDefinitions    CustomFieldDefinition[]
+  customFieldValues         CustomFieldValue[]
+  savedViews                SavedView[]
+  importJobs                ImportJob[]
 
   @@index([slug])
   @@map("tenants")
@@ -37,11 +48,14 @@ model User {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
-  tenants                    TenantUser[]
-  invitedInvitations         Invitation[] @relation("invitedBy")
-  createdAuditLogs           AuditLog[]   @relation("actor")
-  impersonationSessionsAsAdmin ImpersonationSession[] @relation("superAdminImpersonation")
-  impersonationSessionsAsTarget ImpersonationSession[] @relation("targetImpersonation")
+  tenants                        TenantUser[]
+  invitedInvitations             Invitation[] @relation("invitedBy")
+  createdAuditLogs               AuditLog[]   @relation("actor")
+  impersonationSessionsAsAdmin   ImpersonationSession[] @relation("superAdminImpersonation")
+  impersonationSessionsAsTarget  ImpersonationSession[] @relation("targetImpersonation")
+  ownedLeads                     Lead[] @relation("leadOwner")
+  savedViews                     SavedView[]
+  importJobs                     ImportJob[]
 
   @@map("users")
 }
@@ -82,6 +96,7 @@ model Team {
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   members     TenantUser[]
+  leads       Lead[]
 
   @@index([tenantId])
   @@map("teams")
@@ -148,5 +163,242 @@ model ImpersonationSession {
   @@index([superAdminUserId, startedAt])
   @@index([targetUserId, startedAt])
   @@map("impersonation_sessions")
+}
+
+model Company {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String   @db.Uuid @map("tenant_id")
+  name       String
+  domain     String?
+  industry   String?
+  size       String?
+  description String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdBy  String   @db.Uuid @map("created_by")
+  updatedBy  String   @db.Uuid @map("updated_by")
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts   Contact[]
+  leads      Lead[]
+
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@map("companies")
+}
+
+model Contact {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  name      String
+  email     String?
+  phone     String?
+  title     String?
+  companyId String?  @db.Uuid @map("company_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String   @db.Uuid @map("created_by")
+  updatedBy String   @db.Uuid @map("updated_by")
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  leadContacts LeadContact[]
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@map("contacts")
+}
+
+model LeadSource {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")
+  name            String
+  isSystemDefault Boolean  @default(false) @map("is_system_default")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leads  Lead[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("lead_sources")
+}
+
+model Tag {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  name      String
+  color     String   @default("blue")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadTags LeadTag[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("tags")
+}
+
+model Lead {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @db.Uuid @map("tenant_id")
+  name           String
+  email          String?
+  phone          String?
+  jobTitle       String?  @map("job_title")
+  sourceId       String?  @db.Uuid @map("source_id")
+  companyId      String?  @db.Uuid @map("company_id")
+  status         String   @default("new") // new|contacted|qualified|unqualified|won|lost
+  pipelineId     String?  @db.Uuid @map("pipeline_id")
+  stageId        String?  @db.Uuid @map("stage_id")
+  ownerUserId    String?  @db.Uuid @map("owner_user_id")
+  teamId         String?  @db.Uuid @map("team_id")
+  score          Int      @default(0)
+  estimatedValue Float?   @map("estimated_value")
+  priority       String   @default("medium") // low|medium|high
+  description    String?
+  lastActivityAt DateTime? @map("last_activity_at")
+  nextActivityAt DateTime? @map("next_activity_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdBy      String   @db.Uuid @map("created_by")
+  updatedBy      String   @db.Uuid @map("updated_by")
+  deletedAt      DateTime? @map("deleted_at")
+
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source           LeadSource?      @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  company          Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  ownerUser        User?            @relation("leadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  team             Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  leadContacts     LeadContact[]
+  leadTags         LeadTag[]
+  customFieldValues CustomFieldValue[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, ownerUserId])
+  @@index([tenantId, teamId])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, createdAt])
+  @@map("leads")
+}
+
+model LeadContact {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @db.Uuid @map("tenant_id")
+  leadId       String   @db.Uuid @map("lead_id")
+  contactId    String   @db.Uuid @map("contact_id")
+  relationship String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, contactId])
+  @@index([tenantId])
+  @@map("lead_contacts")
+}
+
+model LeadTag {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  tagId     String   @db.Uuid @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+  @@index([tenantId])
+  @@map("lead_tags")
+}
+
+model CustomFieldDefinition {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid @map("tenant_id")
+  entityType    String   @map("entity_type") // lead|contact|company
+  key           String
+  label         String
+  fieldType     String   @map("field_type") // text|textarea|number|currency|date|boolean|select|email|phone|url
+  required      Boolean  @default(false)
+  defaultValue  String?  @map("default_value")
+  options       Json?    // for select/multi-select: [{label, value}, ...]
+  sortOrder     Int      @default(0) @map("sort_order")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values CustomFieldValue[]
+
+  @@unique([tenantId, entityType, key])
+  @@index([tenantId, entityType])
+  @@map("custom_field_definitions")
+}
+
+model CustomFieldValue {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String   @db.Uuid @map("tenant_id")
+  entityType          String   @map("entity_type") // lead|contact|company
+  entityId            String   @db.Uuid @map("entity_id")
+  fieldDefinitionId   String   @db.Uuid @map("field_definition_id")
+  value               Json?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fieldDefinition   CustomFieldDefinition   @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+  lead              Lead?                   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, fieldDefinitionId])
+  @@index([tenantId])
+  @@index([tenantId, entityType, entityId])
+  @@map("custom_field_values")
+}
+
+model SavedView {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  userId    String   @db.Uuid @map("user_id")
+  name      String
+  filters   Json     @default("{}")
+  columns   Json?
+  sortBy    String?  @map("sort_by")
+  sortOrder String   @default("asc") @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@map("saved_views")
+}
+
+model ImportJob {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @db.Uuid @map("tenant_id")
+  userId         String   @db.Uuid @map("user_id")
+  status         String   @default("uploading") // uploading|mapping|validating|duplicates|importing|completed|failed
+  fileUrl        String   @map("file_url")
+  columnMapping  Json?    @map("column_mapping")
+  totalRows      Int      @default(0) @map("total_rows")
+  importedRows   Int      @default(0) @map("imported_rows")
+  errorCount     Int      @default(0) @map("error_count")
+  errors         Json     @default("[]")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@map("import_jobs")
 }
 
