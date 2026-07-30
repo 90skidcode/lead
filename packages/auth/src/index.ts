@@ -1,4 +1,4 @@
-import { hash, verify } from 'argon2';
+import { hash, compare } from 'bcryptjs';
 import { jwtVerify, SignJWT } from 'jose';
 
 export interface Session {
@@ -29,12 +29,12 @@ export class AuthError extends Error {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  return hash(password);
+  return hash(password, 10);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   try {
-    return await verify(hash, password);
+    return await compare(password, hash);
   } catch {
     return false;
   }

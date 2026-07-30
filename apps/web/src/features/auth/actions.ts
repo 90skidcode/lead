@@ -94,9 +94,6 @@ export async function signup(formData: FormData) {
     });
 
     redirect('/dashboard');
-  } catch (error) {
-    const message = error instanceof AuthError ? error.message : 'Signup failed';
-    throw error;
   } finally {
     await db.$disconnect();
   }
@@ -169,8 +166,6 @@ export async function login(email: string, password: string) {
     });
 
     redirect('/dashboard');
-  } catch (error) {
-    throw error;
   } finally {
     await db.$disconnect();
   }
@@ -233,8 +228,6 @@ export async function switchTenant(newTenantId: string) {
     });
 
     redirect('/dashboard');
-  } catch (error) {
-    throw error;
   } finally {
     await db.$disconnect();
   }

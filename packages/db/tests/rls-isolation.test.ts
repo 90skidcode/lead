@@ -39,7 +39,7 @@ describe('RLS Isolation Tests', () => {
       const team1Id = team1Result.rows[0].id;
 
       // Create a team in tenant B
-      const team2Result = await client.query(
+      await client.query(
         `INSERT INTO teams (tenant_id, name) VALUES ($1, $2) RETURNING id`,
         [tenant2Id, 'Team B']
       );

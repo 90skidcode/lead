@@ -1,18 +1,15 @@
-import { AbstractPowerSyncDatabase, Schema, Table, Column, ColumnType } from '@powersync/web';
+// PowerSync schema definition (placeholder for Phase 1)
+// Real sync rules will be configured per phase as we add features
 
-export const appSchema = new Schema({
-  sync_test: new Table(
-    {
-      id: new Column({ name: 'id', type: ColumnType.TEXT }),
-      name: new Column({ name: 'name', type: ColumnType.TEXT }),
-      synced_at: new Column({ name: 'synced_at', type: ColumnType.TEXT }),
-    },
-    { name: 'sync_test' }
-  ),
-});
-
-export async function initializePowerSync(db: AbstractPowerSyncDatabase) {
-  await db.initialize(appSchema);
+export interface PowerSyncConfig {
+  powerSyncUrl: string;
+  tokenSecret: string;
 }
 
-export { AbstractPowerSyncDatabase, Schema, Table, Column, ColumnType };
+export function initPowerSyncClient(config: PowerSyncConfig) {
+  // Placeholder: full initialization in Phase 1+
+  return {
+    url: config.powerSyncUrl,
+    secret: config.tokenSecret,
+  };
+}

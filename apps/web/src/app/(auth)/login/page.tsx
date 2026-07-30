@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  const [error] = useState<string>('');
+  const [loading] = useState(false);
 
   return (
     <div className="space-y-6">

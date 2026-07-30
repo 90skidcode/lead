@@ -54,7 +54,6 @@ describe('Auth Module', () => {
     it('should set expiry to 24 hours', () => {
       const beforeCreate = Date.now();
       const session = createSession('user-1', 'test@example.com', 'tenant-1', 'OWNER');
-      const afterCreate = Date.now();
 
       const expectedExpiry = beforeCreate + 24 * 60 * 60 * 1000;
       const timeDiff = Math.abs(session.expiresAt.getTime() - expectedExpiry);
