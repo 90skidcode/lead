@@ -48,6 +48,8 @@ model Tenant {
   tenantSettings            TenantSettings?
   notificationPreferences   NotificationPreference[]
   syncStatuses              SyncStatus[]
+  comments                  Comment[]
+  userPresences             UserPresence[]
 
   @@index([slug])
   @@map("tenants")
@@ -78,6 +80,8 @@ model User {
   csvExports                     CsvExport[]
   notificationPreferences        NotificationPreference[]
   syncStatuses                   SyncStatus[]
+  comments                       Comment[]
+  userPresences                  UserPresence[]
 
   @@map("users")
 }
@@ -303,6 +307,7 @@ model Lead {
   automationRuns   AutomationRun[]
   scoreHistories   LeadScoreHistory[]
   emailEnrollments EmailSequenceEnrollment[]
+  comments         Comment[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -746,7 +751,41 @@ model SyncStatus {
   @@map("sync_statuses")
 }
 
+model Comment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  authorUserId String @db.Uuid @map("author_user_id")
+  body      String
+  mentions  Json     @default("[]") // array of {userId, email, displayName}
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId, leadId, deletedAt])
+  @@index([tenantId, authorUserId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("comments")
+}
 
+model UserPresence {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @db.Uuid @map("tenant_id")
+  userId             String   @db.Uuid @map("user_id")
+  viewingEntityType  String?  @map("viewing_entity_type") // lead|contact|null for general browsing
+  viewingEntityId    String?  @db.Uuid @map("viewing_entity_id")
+  lastSeenAt         DateTime @updatedAt @map("last_seen_at")
+  updatedAt          DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, viewingEntityType, viewingEntityId])
+  @@map("user_presences")
+}
 
