@@ -33,6 +33,11 @@ model Tenant {
   customFieldValues         CustomFieldValue[]
   savedViews                SavedView[]
   importJobs                ImportJob[]
+  pipelines                 Pipeline[]
+  pipelineStages            PipelineStage[]
+  activities                Activity[]
+  notes                     Note[]
+  tasks                     Task[]
 
   @@index([slug])
   @@map("tenants")
@@ -56,6 +61,9 @@ model User {
   ownedLeads                     Lead[] @relation("leadOwner")
   savedViews                     SavedView[]
   importJobs                     ImportJob[]
+  activities                     Activity[]
+  notes                          Note[]
+  assignedTasks                  Task[]
 
   @@map("users")
 }
@@ -271,9 +279,13 @@ model Lead {
   company          Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
   ownerUser        User?            @relation("leadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   team             Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  pipeline         Pipeline?        @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
   leadContacts     LeadContact[]
   leadTags         LeadTag[]
   customFieldValues CustomFieldValue[]
+  activities       Activity[]
+  notes            Note[]
+  tasks            Task[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -400,5 +412,102 @@ model ImportJob {
   @@index([tenantId, userId])
   @@index([tenantId, status])
   @@map("import_jobs")
+}
+
+model Pipeline {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  name      String
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages PipelineStage[]
+  leads  Lead[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("pipelines")
+}
+
+model PipelineStage {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @db.Uuid @map("tenant_id")
+  pipelineId   String   @db.Uuid @map("pipeline_id")
+  name         String
+  sortOrder    Int      @default(0) @map("sort_order")
+  probability  Int      @default(50) // 0-100 likelihood of winning
+  isWon        Boolean  @default(false) @map("is_won")
+  isLost       Boolean  @default(false) @map("is_lost")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, pipelineId])
+  @@map("pipeline_stages")
+}
+
+model Activity {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  type      String   // note|call|email|meeting|task|stage_change|assignment|system_event
+  actorUserId String @db.Uuid @map("actor_user_id")
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  actor  User   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, leadId, createdAt])
+  @@index([tenantId, actorUserId, createdAt])
+  @@map("activities")
+}
+
+model Note {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  authorUserId String @db.Uuid @map("author_user_id")
+  body      String
+  isPinned  Boolean  @default(false) @map("is_pinned")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, leadId, deletedAt])
+  @@index([tenantId, createdAt])
+  @@map("notes")
+}
+
+model Task {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String   @db.Uuid @map("tenant_id")
+  leadId         String   @db.Uuid @map("lead_id")
+  title          String
+  assigneeUserId String?  @db.Uuid @map("assignee_user_id")
+  priority       String   @default("medium") // low|medium|high
+  dueDate        DateTime? @map("due_date")
+  status         String   @default("open") // open|completed|cancelled
+  description    String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignee User?  @relation(fields: [assigneeUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, assigneeUserId, status])
+  @@index([tenantId, dueDate])
+  @@map("tasks")
 }
 
