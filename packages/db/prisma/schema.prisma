@@ -45,6 +45,9 @@ model Tenant {
   notifications             Notification[]
   reportSnapshots           ReportSnapshot[]
   csvExports                CsvExport[]
+  tenantSettings            TenantSettings?
+  notificationPreferences   NotificationPreference[]
+  syncStatuses              SyncStatus[]
 
   @@index([slug])
   @@map("tenants")
@@ -73,6 +76,8 @@ model User {
   assignedTasks                  Task[]
   notifications                  Notification[]
   csvExports                     CsvExport[]
+  notificationPreferences        NotificationPreference[]
+  syncStatuses                   SyncStatus[]
 
   @@map("users")
 }
@@ -687,6 +692,61 @@ model CsvExport {
   @@index([userId, createdAt])
   @@map("csv_exports")
 }
+
+model TenantSettings {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @unique @db.Uuid @map("tenant_id")
+  timezone      String   @default("UTC")
+  dateFormat    String   @default("MM/DD/YYYY") @map("date_format")
+  currency      String   @default("USD")
+  language      String   @default("en")
+  leadDefaults  Json     @default("{}") @map("lead_defaults") // default status, priority, source
+  branding      Json     @default("{}") // logo, colors, company name
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}
+
+model NotificationPreference {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  userId    String   @db.Uuid @map("user_id")
+  eventType String   @map("event_type") // assignment|task_due|mention|stage_change
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  inAppEnabled Boolean @default(true) @map("in_app_enabled")
+  pushEnabled Boolean @default(false) @map("push_enabled")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, eventType])
+  @@index([tenantId, userId])
+  @@map("notification_preferences")
+}
+
+model SyncStatus {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  userId    String   @db.Uuid @map("user_id")
+  status    String   @default("synced") // synced|syncing|offline|failed
+  lastSyncAt DateTime? @map("last_sync_at")
+  lastError String?   @map("last_error")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, status])
+  @@map("sync_statuses")
+}
+
+
 
 
 
