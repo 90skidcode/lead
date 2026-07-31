@@ -43,6 +43,8 @@ model Tenant {
   leadScoreHistories        LeadScoreHistory[]
   emailSequences            EmailSequence[]
   notifications             Notification[]
+  reportSnapshots           ReportSnapshot[]
+  csvExports                CsvExport[]
 
   @@index([slug])
   @@map("tenants")
@@ -70,6 +72,7 @@ model User {
   notes                          Note[]
   assignedTasks                  Task[]
   notifications                  Notification[]
+  csvExports                     CsvExport[]
 
   @@map("users")
 }
@@ -645,4 +648,45 @@ model Notification {
   @@index([userId, createdAt])
   @@map("notifications")
 }
+
+model ReportSnapshot {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  reportType  String   @map("report_type") // lead_overview|pipeline_funnel|conversion|rep_performance|team_performance|sources
+  params      Json     @default("{}") // filters: dateRange, userId, teamId, etc
+  data        Json     @default("{}") // aggregated report data
+  computedAt  DateTime @map("computed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, reportType, params])
+  @@index([tenantId, reportType])
+  @@index([computedAt])
+  @@map("report_snapshots")
+}
+
+model CsvExport {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  userId      String   @db.Uuid @map("user_id")
+  exportType  String   @map("export_type") // leads|contacts|companies|reports
+  filters     Json     @default("{}") // export filter params
+  status      String   @default("pending") // pending|processing|completed|failed
+  rowCount    Int      @default(0) @map("row_count")
+  fileUrl     String?  @map("file_url")
+  error       String?
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([userId, createdAt])
+  @@map("csv_exports")
+}
+
+
 
