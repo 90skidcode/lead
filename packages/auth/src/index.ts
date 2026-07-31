@@ -58,25 +58,30 @@ export function createSession(
 }
 
 export async function signSessionToken(session: Session, secret: string): Promise<string> {
-  const secretKey = new TextEncoder().encode(secret);
-  const token = await new SignJWT({
+  const encoder = new TextEncoder();
+  const secretKey = encoder.encode(secret.padEnd(32, ' '));
+
+  const jwt = new SignJWT({
     sub: session.userId,
     email: session.userEmail,
     tenant_id: session.tenantId,
     role: session.role,
     is_super_admin: session.isPlatformSuperAdmin,
-  })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(Math.floor(session.expiresAt.getTime() / 1000))
-    .sign(secretKey);
+  });
 
+  jwt.setProtectedHeader({ alg: 'HS256' });
+  jwt.setIssuedAt();
+  jwt.setExpirationTime(Math.floor(session.expiresAt.getTime() / 1000));
+
+  const token = await jwt.sign(secretKey);
   return token;
 }
 
 export async function verifySessionToken(token: string, secret: string): Promise<Session | null> {
   try {
-    const secretKey = new TextEncoder().encode(secret);
+    const encoder = new TextEncoder();
+    const secretKey = encoder.encode(secret.padEnd(32, ' '));
+
     const verified = await jwtVerify(token, secretKey);
     const payload = verified.payload;
 
