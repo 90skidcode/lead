@@ -33,7 +33,7 @@ export async function updateLeadScore(leadId: string, newScore: number, reason?:
     }
 
     // Update lead score
-    const updated = await db.lead.update({
+    await db.lead.update({
       where: { id: leadId },
       data: { score: newScore },
     });

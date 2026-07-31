@@ -112,7 +112,7 @@ export async function assignLeadRoundRobin(leadId: string, teamId?: string) {
 
     // Find member with least assigned leads
     const memberStats = await Promise.all(
-      members.map(async (member) => ({
+      members.map(async (member: typeof members[number]) => ({
         userId: member.userId,
         leadCount: await db.lead.count({
           where: {
