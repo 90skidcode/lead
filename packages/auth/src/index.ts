@@ -60,7 +60,7 @@ export function createSession(
 export async function signSessionToken(session: Session, secret: string): Promise<string> {
   // Ensure secret is at least 32 characters for HS256
   const paddedSecret = secret.length < 32 ? secret.padEnd(32, '0') : secret;
-  const secretKey = new TextEncoder().encode(paddedSecret);
+  const secretKey = Buffer.from(paddedSecret, 'utf-8');
 
   try {
     const token = await new SignJWT({
@@ -88,7 +88,7 @@ export async function verifySessionToken(token: string, secret: string): Promise
   try {
     // Ensure secret is at least 32 characters for HS256
     const paddedSecret = secret.length < 32 ? secret.padEnd(32, '0') : secret;
-    const secretKey = new TextEncoder().encode(paddedSecret);
+    const secretKey = Buffer.from(paddedSecret, 'utf-8');
 
     const verified = await jwtVerify(token, secretKey);
     const payload = verified.payload;
