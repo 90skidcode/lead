@@ -109,7 +109,7 @@ export async function getRepPerformanceStats(userId?: string) {
 
     // Compute per-rep stats
     const repStats = await Promise.all(
-      stats.map(async (rep) => ({
+      stats.map(async (rep: typeof stats[number]) => ({
         userId: rep.userId,
         email: rep.user.email,
         leadsAssigned: await db.lead.count({
@@ -162,7 +162,7 @@ export async function getPipelineFunnelStats() {
     });
 
     const funnel = await Promise.all(
-      stages.map(async (stage) => ({
+      stages.map(async (stage: typeof stages[number]) => ({
         stageName: stage.name,
         leadCount: await db.lead.count({
           where: {
