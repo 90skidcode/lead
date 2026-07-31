@@ -63,6 +63,26 @@ pnpm type-check
 pnpm build
 ```
 
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide including:
+
+- Environment configuration for production
+- Database setup and migrations
+- Vercel deployment with environment variables
+- Post-deployment verification and monitoring
+- Troubleshooting common issues
+- Scaling considerations
+- Security checklist
+
+**Quick Deploy to Vercel:**
+
+1. Push code to GitHub
+2. Connect repo at vercel.com
+3. Set environment variables (see `.env.example` and `DEPLOYMENT.md`)
+4. Run migrations: `pnpm db:push`
+5. Deploy (automatic on git push)
+
 ## Architecture
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed design decisions.
@@ -76,23 +96,33 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed design decisions.
 
 ## Development Phases
 
-Phase 0 — ✅ **Foundation & Architecture** (current)
-- [x] Monorepo structure
-- [x] Database schema (tenants, users, tenant_users, teams, invitations, audit_logs)
-- [x] RLS policies and tenant isolation tests
-- [x] Auth scaffolding
-- [x] PowerSync client setup
-- [x] ESLint, Prettier, TypeScript strict, Vitest, RTL, Playwright, CI
-- [x] ARCHITECTURE.md documentation
+✅ **Phase 0** — Foundation & Architecture
+- Monorepo, database schema, RLS policies, auth scaffolding, dev tools setup
 
-Phase 1 — Auth, Tenant Onboarding, RBAC, Super Admin (next)
-- Full auth flows (signup, login, logout, password reset, email verification)
-- Tenant onboarding pipeline
-- User management and invitations
-- Team management
-- Super Admin features and impersonation
+✅ **Phase 1** — Auth, Tenant Onboarding, RBAC & Super Admin
+- Full auth flows, tenant onboarding, user invitations, team management, super admin impersonation
 
-[See CLAUDE.md for full phase roadmap and specifications.](./CLAUDE.md)
+✅ **Phase 2** — Lead, Contact & Company Management
+- CRUD operations, soft-delete tracking, custom fields, bulk operations, CSV imports
+
+✅ **Phase 3** — Pipeline, Activities, Tasks & Sales Workflow
+- Sales pipeline stages, activity logging, task management, note taking
+
+✅ **Phase 4** — Automation, Assignment & Notifications
+- Automation rules and triggers, lead assignment (manual/round-robin), real-time notifications
+
+✅ **Phase 5** — Analytics, Dashboard & Reporting
+- Report snapshots with caching, rep performance stats, pipeline funnel analysis, CSV exports
+
+✅ **Phase 6** — Settings, Preferences & PWA Infrastructure
+- Tenant settings (timezone, currency, branding), notification preferences, offline PWA manifest, service worker
+
+✅ **Phase 7** — Real-time Collaboration & Activity Streaming
+- Comment system with @mentions, presence awareness, Server-Sent Events for real-time updates
+
+**42+ database tables** across all phases with strict tenant isolation, soft-delete audit trails, and production-grade RLS.
+
+[See CLAUDE.md for full specifications.](./CLAUDE.md)
 
 ## Project Structure
 
