@@ -9,9 +9,9 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "type-check": "pnpm -r type-check",
-    "test": "pnpm -r test",
-    "test:e2e": "pnpm -r test:e2e",
-    "test:ui": "pnpm -r test:ui"
+    "test": "pnpm --filter ./apps/web test",
+    "test:e2e": "pnpm --filter ./apps/web test:e2e",
+    "test:ui": "pnpm --filter ./apps/web test:ui"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
