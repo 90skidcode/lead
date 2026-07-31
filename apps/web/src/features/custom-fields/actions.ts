@@ -23,7 +23,7 @@ export async function createCustomFieldDefinition(data: {
   }
 
   try {
-    requirePermission(session, 'lead:manage');
+    requirePermission(session, 'tenant:manage');
 
     const definition = await db.customFieldDefinition.create({
       data: {
@@ -72,7 +72,7 @@ export async function updateCustomFieldDefinition(
   }
 
   try {
-    requirePermission(session, 'lead:manage');
+    requirePermission(session, 'tenant:manage');
 
     const definition = await db.customFieldDefinition.update({
       where: { id: fieldId },
@@ -106,7 +106,7 @@ export async function deleteCustomFieldDefinition(fieldId: string) {
   }
 
   try {
-    requirePermission(session, 'lead:manage');
+    requirePermission(session, 'tenant:manage');
 
     // Delete all associated values first
     await db.customFieldValue.deleteMany({

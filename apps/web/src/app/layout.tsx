@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
+import { ServiceWorkerRegistration } from './service-worker-registration';
 
 export const metadata: Metadata = {
   title: 'Lead Management SaaS',
