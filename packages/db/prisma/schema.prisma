@@ -38,6 +38,11 @@ model Tenant {
   activities                Activity[]
   notes                     Note[]
   tasks                     Task[]
+  automationRules           AutomationRule[]
+  automationRuns            AutomationRun[]
+  leadScoreHistories        LeadScoreHistory[]
+  emailSequences            EmailSequence[]
+  notifications             Notification[]
 
   @@index([slug])
   @@map("tenants")
@@ -64,6 +69,7 @@ model User {
   activities                     Activity[]
   notes                          Note[]
   assignedTasks                  Task[]
+  notifications                  Notification[]
 
   @@map("users")
 }
@@ -286,6 +292,9 @@ model Lead {
   activities       Activity[]
   notes            Note[]
   tasks            Task[]
+  automationRuns   AutomationRun[]
+  scoreHistories   LeadScoreHistory[]
+  emailEnrollments EmailSequenceEnrollment[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -509,5 +518,131 @@ model Task {
   @@index([tenantId, assigneeUserId, status])
   @@index([tenantId, dueDate])
   @@map("tasks")
+}
+
+model AutomationRule {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  name      String
+  triggerType String // lead_created|lead_updated|lead_scored|manual|webhook
+  conditions Json    @default("[]") // array of conditions to match
+  actions   Json    @default("[]") // array of actions to execute
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs   AutomationRun[]
+
+  @@index([tenantId, isActive])
+  @@map("automation_rules")
+}
+
+model AutomationRun {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  ruleId    String   @db.Uuid @map("rule_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  status    String   @default("pending") // pending|running|success|failed
+  error     String?
+  startedAt DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule   AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([ruleId, createdAt])
+  @@map("automation_runs")
+}
+
+model LeadScoreHistory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  leadId    String   @db.Uuid @map("lead_id")
+  oldScore  Int      @map("old_score")
+  newScore  Int      @map("new_score")
+  reason    String?  // why the score changed
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, leadId, createdAt])
+  @@map("lead_score_history")
+}
+
+model EmailSequence {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps       EmailSequenceStep[]
+  enrollments EmailSequenceEnrollment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("email_sequences")
+}
+
+model EmailSequenceStep {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sequenceId   String   @db.Uuid @map("sequence_id")
+  stepNumber   Int      @map("step_number")
+  subject      String
+  body         String   // HTML template
+  delayMinutes Int      @default(0) @map("delay_minutes")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sequence EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, stepNumber])
+  @@index([sequenceId])
+  @@map("email_sequence_steps")
+}
+
+model EmailSequenceEnrollment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sequenceId String   @db.Uuid @map("sequence_id")
+  leadId     String   @db.Uuid @map("lead_id")
+  status     String   @default("active") // active|paused|completed|cancelled
+  currentStep Int     @default(1) @map("current_step")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  pausedAt   DateTime? @map("paused_at")
+  completedAt DateTime? @map("completed_at")
+
+  sequence EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  lead     Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, leadId])
+  @@index([sequenceId, status])
+  @@map("email_sequence_enrollments")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid @map("tenant_id")
+  userId    String   @db.Uuid @map("user_id")
+  type      String   // assignment|task_due|task_overdue|mention|stage_change|system
+  title     String
+  body      String?
+  leadId    String?  @db.Uuid @map("lead_id")
+  taskId    String?  @db.Uuid @map("task_id")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, readAt])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
