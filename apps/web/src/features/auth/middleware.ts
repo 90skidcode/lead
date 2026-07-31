@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionToken, Session } from '@lead/auth';
 
 const SESSION_COOKIE_NAME = 'session_token';
-const PUBLIC_ROUTES = ['/', '/login', '/signup'];
+const PUBLIC_AUTH_ROUTES = ['/login', '/signup'];
 const ADMIN_ROUTES = ['/admin'];
 
 export async function resolveSession(request: NextRequest): Promise<{
@@ -16,20 +16,34 @@ export async function resolveSession(request: NextRequest): Promise<{
     session = await verifySessionToken(token, process.env.SESSION_SECRET!);
   }
 
-  // Redirect unauthenticated users to login (except on public routes)
   const pathname = request.nextUrl.pathname;
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
 
-  if (!session && !isPublicRoute) {
+  // Redirect root path based on authentication status
+  if (pathname === '/') {
+    if (!session) {
+      return {
+        session: null,
+        response: NextResponse.redirect(new URL('/login', request.url)),
+      };
+    }
+    return {
+      session,
+      response: NextResponse.redirect(new URL('/dashboard', request.url)),
+    };
+  }
+
+  // Redirect unauthenticated users to login (except on public auth routes)
+  if (!session && !isPublicAuthRoute) {
     return {
       session: null,
       response: NextResponse.redirect(new URL('/login', request.url)),
     };
   }
 
-  // Redirect authenticated users away from auth routes
-  if (session && (pathname === '/login' || pathname === '/signup')) {
+  // Redirect authenticated users away from auth routes to dashboard
+  if (session && isPublicAuthRoute) {
     return {
       session,
       response: NextResponse.redirect(new URL('/dashboard', request.url)),
